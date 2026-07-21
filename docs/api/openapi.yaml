@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: Skill Test Olympic Backend API
+  version: 1.0.0
+  description: REST API for HR recruitment modules covering auth, candidates, jobs, applications, dashboard, RBAC, and backend bonus features.
+servers:
+  - url: http://localhost:8000/api
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum: [new, screening, interview, accepted, rejected]
+        photo_path:
+          type: string
+          nullable: true
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        department:
+          type: string
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+    Application:
+      type: object
+      properties:
+        id:
+          type: integer
+        candidate_id:
+          type: integer
+        job_id:
+          type: integer
+        apply_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [submitted, reviewed, interview, accepted, rejected]
+paths:
+  /login:
+    post:
+      security: []
+      tags: [Authentication]
+      summary: Login and receive Sanctum bearer token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+        '401':
+          description: Invalid credentials.
+  /logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current token.
+      responses:
+        '200':
+          description: Logout successful.
+  /me:
+    get:
+      tags: [Authentication]
+      summary: Return authenticated user profile.
+      responses:
+        '200':
+          description: Authenticated user.
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Return total candidates, total jobs, and candidate counts per status.
+      responses:
+        '200':
+          description: Dashboard metrics.
+  /candidates:
+    get:
+      tags: [Candidates]
+      summary: List candidates with search, pagination, sorting, and status filter.
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [full_name, email, status, created_at]
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Paginated candidates.
+    post:
+      tags: [Candidates]
+      summary: Create a candidate, optionally with a photo upload.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Candidate'
+                - type: object
+                  properties:
+                    photo:
+                      type: string
+                      format: binary
+      responses:
+        '201':
+          description: Candidate created.
+  /candidates/{id}:
+    get:
+      tags: [Candidates]
+      summary: Show candidate detail and application history.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Candidate detail.
+    put:
+      tags: [Candidates]
+      summary: Update candidate data.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Candidate updated.
+    delete:
+      tags: [Candidates]
+      summary: Soft-delete candidate.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Candidate deleted.
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: List jobs.
+      responses:
+        '200':
+          description: Paginated jobs.
+    post:
+      tags: [Jobs]
+      summary: Create job.
+      responses:
+        '201':
+          description: Job created.
+  /jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: Show job.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job detail.
+    put:
+      tags: [Jobs]
+      summary: Update job.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job updated.
+    delete:
+      tags: [Jobs]
+      summary: Soft-delete job.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job deleted.
+  /applications:
+    get:
+      tags: [Applications]
+      summary: List applications.
+      responses:
+        '200':
+          description: Paginated applications.
+    post:
+      tags: [Applications]
+      summary: Create application.
+      responses:
+        '201':
+          description: Application created.
+  /application:
+    get:
+      tags: [Applications]
+      summary: Compatibility alias for GET /applications from the PDF.
+      responses:
+        '200':
+          description: Paginated applications.
+  /applications/{id}:
+    get:
+      tags: [Applications]
+      summary: Show application.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Application detail.
+    put:
+      tags: [Applications]
+      summary: Update application status.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Application updated.
+  /candidates/export:
+    get:
+      tags: [Candidates]
+      summary: Export candidates to Excel.
+      responses:
+        '200':
+          description: XLSX file.
+  /candidates/import:
+    post:
+      tags: [Candidates]
+      summary: Import candidates from XLSX, XLS, or CSV.
+      responses:
+        '201':
+          description: Import accepted.
